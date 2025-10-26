@@ -1,0 +1,101 @@
+{
+  "dev": {
+    "catalog": "abu_catalog",
+    "schema_files": "databricksassetbundletest",
+    "volume": "externalvolumetes",
+    "schema_tables": "gdp_poc_dev",
+    "env": "dev",
+    "version": "v2.0.0",
+    "description": "Environnement de développement",
+    
+    "_comment_features": "=== Nouvelles Features R1 ===",
+    
+    "fail_fast_enabled": true,
+    "fail_fast_threshold": 10,
+    "_comment_fail_fast": "Arrête l'ingestion si % erreurs >= threshold (ex: 10%)",
+    
+    "invalid_lines_generated": true,
+    "_comment_invalid_lines": "Sauvegarde lignes invalides dans table <table>_invalid_lines",
+    
+    "duplicate_check_enabled": true,
+    "_comment_duplicate": "Vérifie si fichier déjà traité (error 000000002)",
+    
+    "file_order_check_enabled": true,
+    "_comment_file_order": "Vérifie ordre chronologique fichiers (error 000000003)",
+    
+    "non_zip_support_enabled": true,
+    "_comment_non_zip": "Support fichiers CSV directs (non-ZIP)",
+    
+    "delete_zip_after_extract": true,
+    "_comment_delete_zip": "Supprime ZIP après extraction (économie espace)",
+    
+    "input_header_mode": "empty",
+    "_comment_input_header": "Options: empty, FIRST_LINE, HEADER_USE",
+    
+    "ict_default": 10,
+    "rlt_default": 10,
+    "_comment_tolerances": "ICT et RLT par défaut (en %)",
+    
+    "partitioning_default": "yyyy/mm/dd",
+    "_comment_partitioning": "Options: yyyy, yyyy/mm, yyyy/mm/dd, yyyy/mm/dd/hhmmss",
+    
+    "tracking_cleanup_days": 90,
+    "_comment_tracking": "Garder tracking des fichiers pour X jours",
+    
+    "invalid_lines_cleanup_days": 30,
+    "_comment_invalid_cleanup": "Garder lignes invalides pour X jours"
+  },
+  
+  "int": {
+    "catalog": "abu_catalog",
+    "schema_files": "databricksassetbundletest",
+    "volume": "externalvolumetes",
+    "schema_tables": "gdp_poc_int",
+    "env": "int",
+    "version": "v2.0.0",
+    "description": "Environnement d'intégration",
+    
+    "fail_fast_enabled": true,
+    "fail_fast_threshold": 10,
+    "invalid_lines_generated": true,
+    "duplicate_check_enabled": true,
+    "file_order_check_enabled": true,
+    "non_zip_support_enabled": true,
+    "delete_zip_after_extract": true,
+    "input_header_mode": "empty",
+    "ict_default": 10,
+    "rlt_default": 10,
+    "partitioning_default": "yyyy/mm/dd",
+    "tracking_cleanup_days": 90,
+    "invalid_lines_cleanup_days": 30
+  },
+  
+  "prd": {
+    "catalog": "abu_catalog_prd",
+    "schema_files": "databricksassetbundletest_prd",
+    "volume": "externalvolumetes_prd",
+    "schema_tables": "gdp_poc_prd",
+    "env": "prd",
+    "version": "v2.0.0",
+    "description": "Environnement de production",
+    
+    "fail_fast_enabled": true,
+    "fail_fast_threshold": 5,
+    "_comment_prd_fail_fast": "Plus strict en production (5% vs 10%)",
+    
+    "invalid_lines_generated": true,
+    "duplicate_check_enabled": true,
+    "file_order_check_enabled": true,
+    "non_zip_support_enabled": true,
+    "delete_zip_after_extract": true,
+    "input_header_mode": "empty",
+    "ict_default": 5,
+    "rlt_default": 5,
+    "_comment_prd_tolerances": "ICT/RLT plus stricts en production",
+    
+    "partitioning_default": "yyyy/mm/dd",
+    "tracking_cleanup_days": 365,
+    "invalid_lines_cleanup_days": 90,
+    "_comment_prd_retention": "Rétention plus longue en production"
+  }
+}
