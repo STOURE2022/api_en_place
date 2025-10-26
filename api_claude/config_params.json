@@ -1,0 +1,29 @@
+{
+  "dev": {
+    "catalog": "abu_catalog",
+    "schema_files": "databricksassetbundletest",
+    "volume": "externalvolumetes",
+    "schema_tables": "gdp_poc_dev",
+    "env": "dev",
+    "version": "v1",
+    "description": "Environnement de développement"
+  },
+  "int": {
+    "catalog": "abu_catalog",
+    "schema_files": "databricksassetbundletest",
+    "volume": "externalvolumetes",
+    "schema_tables": "gdp_poc_int",
+    "env": "int",
+    "version": "v1",
+    "description": "Environnement d'intégration"
+  },
+  "prd": {
+    "catalog": "abu_catalog_prd",
+    "schema_files": "databricksassetbundletest_prd",
+    "volume": "externalvolumetes_prd",
+    "schema_tables": "gdp_poc_prd",
+    "env": "prd",
+    "version": "v1",
+    "description": "Environnement de production"
+  }
+}

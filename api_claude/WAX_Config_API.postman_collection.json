@@ -1,0 +1,305 @@
+{
+  "info": {
+    "name": "WAX Config API",
+    "description": "Collection complète pour tester l'API de configuration WAX",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "Vérifie que l'API fonctionne correctement"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"API is healthy\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status).to.eql(\"healthy\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Get All Configs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/config",
+          "host": ["{{base_url}}"],
+          "path": ["config"]
+        },
+        "description": "Récupère toutes les configurations disponibles"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Has data\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data).to.be.an('object');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Get DEV Config",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/config/dev",
+          "host": ["{{base_url}}"],
+          "path": ["config", "dev"]
+        },
+        "description": "Récupère la configuration DEV"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Has required fields\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data).to.have.property('catalog');",
+              "    pm.expect(jsonData.data).to.have.property('env');",
+              "    pm.expect(jsonData.data.env).to.eql('dev');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Get INT Config",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/config/int",
+          "host": ["{{base_url}}"],
+          "path": ["config", "int"]
+        },
+        "description": "Récupère la configuration INT"
+      }
+    },
+    {
+      "name": "5. Get PRD Config",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/config/prd",
+          "host": ["{{base_url}}"],
+          "path": ["config", "prd"]
+        },
+        "description": "Récupère la configuration PRD"
+      }
+    },
+    {
+      "name": "6. Create TEST Config",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"catalog\": \"test_catalog\",\n  \"schema_files\": \"test_schema_files\",\n  \"volume\": \"test_volume\",\n  \"schema_tables\": \"test_schema_tables\",\n  \"env\": \"test\",\n  \"version\": \"v1\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/config/test",
+          "host": ["{{base_url}}"],
+          "path": ["config", "test"]
+        },
+        "description": "Crée ou met à jour la configuration TEST"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Config created\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status).to.eql('success');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Update DEV Config",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"catalog\": \"abu_catalog_new\",\n  \"schema_files\": \"databricksassetbundletest_v2\",\n  \"volume\": \"externalvolumetes_v2\",\n  \"schema_tables\": \"gdp_poc_dev_v2\",\n  \"env\": \"dev\",\n  \"version\": \"v2\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/config/dev",
+          "host": ["{{base_url}}"],
+          "path": ["config", "dev"]
+        },
+        "description": "Met à jour la configuration DEV"
+      }
+    },
+    {
+      "name": "8. Validate DEV Config",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/config/dev/validate",
+          "host": ["{{base_url}}"],
+          "path": ["config", "dev", "validate"]
+        },
+        "description": "Valide la configuration DEV"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Validation exists\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.validation).to.be.an('object');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Validate TEST Config",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/config/test/validate",
+          "host": ["{{base_url}}"],
+          "path": ["config", "test", "validate"]
+        },
+        "description": "Valide la configuration TEST"
+      }
+    },
+    {
+      "name": "10. Delete TEST Config",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/config/test",
+          "host": ["{{base_url}}"],
+          "path": ["config", "test"]
+        },
+        "description": "Supprime la configuration TEST"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Config deleted\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status).to.eql('success');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Get Non-Existent Config (Error)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/config/nonexistent",
+          "host": ["{{base_url}}"],
+          "path": ["config", "nonexistent"]
+        },
+        "description": "Teste la gestion d'erreur pour un environnement inexistant"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 404\", function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test(\"Error message present\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status).to.eql('error');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ]
+}
