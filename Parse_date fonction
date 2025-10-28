@@ -1,0 +1,55 @@
+def parse_date_with_logs(
+    self, df: DataFrame, cname: str, patterns: list,
+    table_name: str, filename: str, default_date=None
+) -> tuple:
+    """
+    ✅ Version conforme à la documentation WAX
+    Convertit toutes les dates d'entrée vers un format homogène
+    'yyyy-MM-dd HH:mm:ss' (TimestampType).
+
+    - Si la date ne correspond pas au pattern -> NULL + erreur loguée.
+    - Si la date correspond -> homogénéisée vers 'yyyy-MM-dd HH:mm:ss'.
+    """
+
+    raw_col = F.col(cname)
+    # Gérer les cellules vides
+    col_expr = F.when(F.length(F.trim(raw_col)) == 0, F.lit(None)).otherwise(raw_col)
+
+    ts_col = None
+
+    # 🔁 Tester chaque pattern défini (Excel + config globale)
+    for p in patterns:
+        cand = F.expr(f"try_to_timestamp({cname}, '{p}')")
+        ts_col = cand if ts_col is None else F.coalesce(ts_col, cand)
+
+    # 🔧 Homogénéisation : format de sortie WAX = 'yyyy-MM-dd HH:mm:ss'
+    parsed = F.date_format(ts_col, "yyyy-MM-dd HH:mm:ss")
+
+    # Si on veut une vraie colonne TimestampType Spark :
+    parsed_with_default = (
+        F.when(parsed.isNull(), F.lit(default_date))
+        .otherwise(parsed)
+        .cast("timestamp")
+    )
+
+    df_parsed = df.withColumn(cname, parsed_with_default)
+
+    # 🔎 Journalisation des erreurs
+    errs = (
+        df.withColumn("line_id", F.monotonically_increasing_id() + 1)
+        .select(
+            F.lit(table_name).alias("table_name"),
+            F.lit(filename).alias("filename"),
+            F.lit(cname).alias("column_name"),
+            F.when(parsed.isNull() & (F.trim(raw_col) == ""), F.lit("EMPTY_DATE"))
+            .when(parsed.isNull() & (F.trim(raw_col) != ""), F.lit("INVALID_DATE"))
+            .otherwise(F.lit(None))
+            .alias("error_message"),
+            raw_col.cast("string").alias("raw_value"),
+            F.lit(1).alias("error_count"),
+        )
+        .where(F.col("error_message").isNotNull())
+        .limit(1000)
+    )
+
+    return df_parsed, errs
