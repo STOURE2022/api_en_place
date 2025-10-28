@@ -1,0 +1,235 @@
+# Checklist Détaillée - Outil d'Ingestion de Données
+
+## 📋 1. CONTRÔLES SUR LES FICHIERS
+
+### Vérification des doublons
+- [ ] **Contrôler que le fichier n'existe pas déjà**
+  - Comparer le nom du fichier reçu avec tous les fichiers déjà ingérés
+  - Si doublon détecté → rejeter avec erreur 000000002
+
+### Validation du nom de fichier
+- [ ] **Extraire et valider la date du nom de fichier**
+  - Exemples de formats : `billing_20251016_101112.csv` ou `fichier_2025/10/15.csv`
+  - Vérifier que la date est valide (pas de 32/13/2025)
+  - Si invalide → rejeter avec erreur 000000001
+
+- [ ] **Vérifier la partie fixe du nom**
+  - Exemple : pour pattern `billing_yyyymmdd.csv`, vérifier que ça commence par "billing"
+  - Comparaison sensible à la casse (Billing ≠ billing)
+  - Si pas de correspondance → rejeter avec erreur 000000001
+
+### Contrôle de l'ordre chronologique
+- [ ] **Vérifier que le fichier est plus récent que le précédent**
+  - Comparer la date du fichier reçu avec le dernier fichier ingéré
+  - Si date antérieure → rejeter avec erreur 000000003
+  - ⚠️ Concerne uniquement l'ingestion jour après jour (pas la récupération)
+
+### Traitement des fichiers
+- [ ] **Décompresser les fichiers ZIP**
+  - Si fichier = .zip → décompresser
+  - Copier les fichiers extraits vers le dossier RAW
+
+- [ ] **Copier les fichiers non-zippés**
+  - Si fichier ≠ .zip → copier directement vers le dossier RAW
+
+---
+
+## 📊 2. CONTRÔLES SUR LES DONNÉES
+
+### Validation du schéma
+- [ ] **Vérifier le nombre de colonnes**
+  - Compter les colonnes du fichier reçu
+  - Comparer avec le schéma défini dans la configuration
+  - Si différent → rejeter avec erreur 000000006
+
+### Validation des types de données
+- [ ] **Contrôler les types pour chaque colonne**
+  - Exemple : si colonne définie comme "Integer", vérifier que c'est bien un nombre
+  - Si type incorrect → mettre la valeur à NULL + appliquer la règle d'erreur
+  - Exception : les dates ont un traitement spécial (voir ci-dessous)
+
+### Gestion des valeurs NULL
+- [ ] **Vérifier les colonnes obligatoires**
+  - Si colonne configurée comme "NOT Nullable" et valeur = NULL
+  - → Appliquer la règle d'erreur
+
+### Traitement des dates
+- [ ] **Valider le format des dates en entrée**
+  - Exemples d'entrée : `15/10/2025`, `15Oct2025 10:10:10`, `2025-10-15`
+  - Vérifier que le format correspond au "transformation_pattern_date" configuré
+  - Si invalide → mettre NULL + appliquer règle d'erreur
+
+- [ ] **Convertir toutes les dates au format standard**
+  - Format de sortie obligatoire : `yyyy-MM-dd HH:mm:ss`
+  - Exemple : `15/10/2025` devient `2025-10-15 00:00:00`
+
+### Transformations spéciales
+- [ ] **Appliquer les transformations REGEX**
+  - Exemple : extraire une partie du nom de fichier avec `.{25}$`
+  - Créer une nouvelle colonne avec le résultat
+
+- [ ] **Enrichissement depuis le nom de fichier**
+  - Type "filename-modified" : extraire des infos du nom du fichier
+  - Créer une colonne technique avec ces infos
+
+---
+
+## 🏗️ 3. CRÉATION DES TABLES DELTA
+
+### Structure des tables
+- [ ] **Créer 2 tables pour chaque source de données**
+  - Table "Last" : `nom_table_last` (dernières données uniquement)
+  - Table "All" : `nom_table_all` (historique complet de tous les fichiers)
+
+### Colonnes techniques obligatoires
+- [ ] **Ajouter 4 colonnes au début de chaque table**
+  1. `FILE_LINE_ID` (Integer) : numéro de ligne unique
+  2. `FILE_NAME_RECEIVED` (String) : nom du fichier source
+  3. `FILE_EXTRACTION_DATE` (Timestamp) : date d'extraction du fichier
+  4. `FILE_PROCESS_DATE` (Timestamp) : date d'ingestion (maintenant)
+
+### Partitionnement (table "All" uniquement)
+- [ ] **Ajouter les colonnes de partitionnement**
+  - Si partition = `yyyy/mm/dd/hhmmss` → créer colonnes : yyyy, mm, dd, hhmmss
+  - Si partition = `yyyy/mm/dd` → créer colonnes : yyyy, mm, dd
+  - Si partition = `yyyy/mm` → créer colonnes : yyyy, mm
+  - Si partition = `yyyy` → créer colonne : yyyy
+
+### Conservation des données sources
+- [ ] **Préserver toutes les colonnes originales**
+  - Toutes les colonnes du fichier source doivent être présentes en sortie
+  - Ordre : colonnes techniques PUIS colonnes sources
+
+---
+
+## ⚙️ 4. GESTION DES EN-TÊTES
+
+- [ ] **INPUT_HEADER = vide (par défaut)**
+  - Utiliser les noms de colonnes définis dans la configuration Excel
+  - Ignorer complètement la première ligne du fichier
+
+- [ ] **INPUT_HEADER = FIRST_LINE**
+  - Il y a une ligne d'en-tête dans le fichier
+  - Sauter cette première ligne lors de l'ingestion
+  - Utiliser quand même les noms de la configuration (pas ceux du fichier)
+
+- [ ] **INPUT_HEADER = HEADER_USE**
+  - Utiliser les noms de colonnes de la première ligne du fichier
+  - Ignorer les noms définis dans la configuration
+
+---
+
+## ⚠️ 5. GESTION DES ERREURS
+
+### Calcul ICT (Invalid Column per line Tolerance)
+- [ ] **Calculer le % de colonnes invalides par ligne**
+  - ICT = (nombre colonnes invalides / nombre total colonnes) × 100
+  - Exemple : 2 colonnes invalides sur 20 = 10%
+
+- [ ] **Appliquer le seuil ICT**
+  - Si ICT calculé ≥ ICT configuré (défaut: 10%)
+  - → Rejeter la ligne de la table "Last" (pas de "All")
+  - → Incrémenter le compteur "lignes rejetées"
+
+### Calcul RLT (Rejected Line per file Tolerance)
+- [ ] **Calculer le % de lignes rejetées par fichier**
+  - RLT = (nombre lignes rejetées / nombre total lignes) × 100
+  - Exemple : 15 lignes rejetées sur 100 = 15%
+
+- [ ] **Appliquer le seuil RLT**
+  - Si RLT calculé ≥ RLT configuré (défaut: 10%)
+  - → Rejeter tout le fichier
+  - → Incrémenter le compteur "fichiers rejetés"
+
+### Actions d'erreur configurables
+- [ ] **ICT_DRIVEN (par défaut)**
+  - Incrémenter le compteur ICT
+  - Appliquer la règle ICT (voir ci-dessus)
+
+- [ ] **REJECT**
+  - Rejeter immédiatement la ligne
+  - Générer une ligne invalide dans table dédiée
+  - Appliquer la règle RLT
+
+- [ ] **LOG_ONLY**
+  - Logger l'erreur mais ne pas rejeter
+  - Garder la donnée (même avec NULL)
+
+### Reporting des erreurs
+- [ ] **Générer une table des lignes invalides** (optionnel)
+  - Si configuré "Invalid_lines_generated = true"
+  - Créer une table avec toutes les lignes rejetées
+
+---
+
+## 📈 6. MODES D'INGESTION
+
+- [ ] **Mode FULL_SNAPSHOT (snapshot complet)**
+  - Utilisé pour : fichiers complets remplaçant les données précédentes
+  - Mettre à jour la table "Last" avec le nouveau fichier
+  - Ajouter le fichier à la table "All" (historique)
+
+- [ ] **Mode DELTA_FROM_FLOW (incrémental)**
+  - Utilisé pour : fichiers contenant uniquement les changements
+  - Ne PAS mettre à jour la table "Last"
+  - Ajouter uniquement à la table "All"
+
+---
+
+## ✅ 7. CONTRÔLES FINAUX
+
+### Vérification de complétude
+- [ ] **S'assurer que tous les fichiers ont été traités**
+  - Calculer : fichiers ingérés + fichiers ignorés + fichiers rejetés + fichiers en erreur technique
+  - Comparer avec le nombre de fichiers reçus en entrée
+  - Si différent → lever une erreur au niveau du job
+
+### Génération du rapport
+- [ ] **Créer un rapport d'exécution pour chaque fichier**
+  - Nombre de lignes traitées
+  - Nombre de lignes rejetées
+  - Nombre de colonnes invalides
+  - Temps de traitement
+  - Statut final (succès/échec)
+
+---
+
+## 🚀 8. OPTION FAIL FAST (à discuter - pas R1)
+
+- [ ] **Configurer un seuil d'erreur global**
+  - Exemple : arrêter si > 10% d'erreurs
+
+- [ ] **Arrêter l'ingestion en cas de dépassement**
+  - Stopper immédiatement le traitement
+  - Rejeter le fichier avec erreur 000000007
+
+---
+
+## 📝 9. MÉTADONNÉES
+
+### Commentaires des colonnes
+- [ ] **Ajouter les descriptions fonctionnelles**
+  - Si colonne a un "Comment" dans la config
+  - Ajouter ce commentaire dans les métadonnées Delta de la colonne
+
+### Nommage des tables
+- [ ] **Appliquer les règles de nommage**
+  - Si "last_table_name_conf" défini → utiliser ce nom
+  - Sinon → `<delta_table_name>_last`
+  - Table All → toujours `<delta_table_name>_all`
+
+---
+
+## 📌 CODES D'ERREUR À RETENIR
+
+| Code      | Signification                                    |
+|-----------|--------------------------------------------------|
+| 000000001 | Date invalide dans nom de fichier               |
+| 000000002 | Fichier déjà traité (doublon)                   |
+| 000000003 | Fichier plus ancien que le précédent            |
+| 000000006 | Nombre de colonnes incorrect                    |
+| 000000007 | Seuil fail-fast dépassé                         |
+
+---
+
+**Résumé : ~50 points de contrôle répartis en 9 catégories principales**
