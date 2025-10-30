@@ -389,7 +389,12 @@ class ColumnProcessor:
         return df_valid, errors
 
     def _get_spark_type(self, type_str: str):
-        """Convertit type string → Spark type"""
+        """
+        Convertit type string → Spark type
+        
+        ✅ IMPORTANT : DATE est TOUJOURS converti en TIMESTAMP
+        Pour respecter la doc qui demande format yyyy-MM-dd HH:mm:ss
+        """
         from pyspark.sql.types import (
             StringType, IntegerType, LongType, FloatType, DoubleType,
             BooleanType, DateType, TimestampType
@@ -403,7 +408,7 @@ class ColumnProcessor:
             "FLOAT": FloatType(),
             "DOUBLE": DoubleType(),
             "BOOLEAN": BooleanType(),
-            "DATE": DateType(),
+            "DATE": TimestampType(),  # ✅ FORCER TIMESTAMP même si Excel dit DATE
             "TIMESTAMP": TimestampType()
         }
 
